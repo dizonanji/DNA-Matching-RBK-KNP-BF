@@ -11,7 +11,7 @@ from benchmark import Benchmark
 # FLAGS AND CONFIGURATION
 # ------------------------------
 # Control which sequences to use
-USE_PREDEFINED = True       # Include predefined test cases
+USE_PREDEFINED = False       # Include predefined test cases
 USE_MANUAL = False          # Include manual DNA + pattern
 USE_RANDOM = False           # Include randomly generated sequences
 USE_FILE = True            # Include DNA from file
@@ -97,6 +97,9 @@ def load_pattern_from_file(file_path):
 # ------------------------------
 # RUN TESTS
 # ------------------------------
+# ------------------------------
+# RUN TESTS
+# ------------------------------
 def run_tests():
     results = []
     sequences = []
@@ -105,10 +108,12 @@ def run_tests():
     if USE_FILE and DNA_INPUT_FILE:
         text = load_dna_from_file(DNA_INPUT_FILE)
         if DNA_PATTERN_FILE:
-            pattern = load_dna_from_file(DNA_PATTERN_FILE)
+            pattern = load_pattern_from_file(DNA_PATTERN_FILE)
         else:
             pattern = DNA_PATTERN_FOR_FILE
-        sequences.append((text, pattern, None, "User DNA File"))
+        # Repeat the file test REPETITIONS times
+        for rep in range(REPETITIONS):
+            sequences.append((text, pattern, None, f"User DNA File (Run {rep+1})"))
 
     # 2) MANUAL SEQUENCE
     if USE_MANUAL:
@@ -141,6 +146,7 @@ def run_tests():
         naive_times, kmp_times, rk_times = [], [], []
 
         for run in range(REPETITIONS):
+            print(f"  Run {run + 1}/{REPETITIONS}")
             n_time, naive_matches = Benchmark.time_function(PatternMatcher.naive_match, text, pattern)
             k_time, kmp_matches = Benchmark.time_function(PatternMatcher.kmp_match, text, pattern)
             r_time, rk_matches = Benchmark.time_function(PatternMatcher.rabin_karp_match, text, pattern)
