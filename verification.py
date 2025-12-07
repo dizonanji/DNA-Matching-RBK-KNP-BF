@@ -13,12 +13,13 @@ from benchmark import Benchmark
 # Control which sequences to use
 USE_PREDEFINED = True       # Include predefined test cases
 USE_MANUAL = False          # Include manual DNA + pattern
-USE_RANDOM = True           # Include randomly generated sequences
-USE_FILE = False            # Include DNA from file
+USE_RANDOM = False           # Include randomly generated sequences
+USE_FILE = True            # Include DNA from file
 
 # DNA / Pattern files
 DNA_INPUT_FILE = "dog.txt"  # File containing DNA sequence
 DNA_PATTERN_FILE = None     # Optional: file containing pattern
+DNA_PATTERN_FOR_FILE = "GCTA" # Manual pattern if no pattern file
 
 # Manual sequence
 MANUAL_DNA_TEXT = "ATCGATCGGCTAATCGGCTAGCTAATCG"
@@ -106,7 +107,7 @@ def run_tests():
         if DNA_PATTERN_FILE:
             pattern = load_dna_from_file(DNA_PATTERN_FILE)
         else:
-            pattern = MANUAL_DNA_PATTERN
+            pattern = DNA_PATTERN_FOR_FILE
         sequences.append((text, pattern, None, "User DNA File"))
 
     # 2) MANUAL SEQUENCE
@@ -189,7 +190,6 @@ def run_tests():
             avg_rk,
             json.dumps(expected) if expected else None
         ])
-
     return results
 
 
