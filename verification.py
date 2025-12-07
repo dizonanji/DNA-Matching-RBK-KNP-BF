@@ -3,7 +3,7 @@ import csv
 import json
 import platform
 import re
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from matcher import PatternMatcher
 from benchmark import Benchmark
 
@@ -11,7 +11,7 @@ from benchmark import Benchmark
 # FLAGS AND CONFIGURATION
 # ------------------------------
 # Control which sequences to use
-USE_PREDEFINED = False       # Include predefined test cases
+USE_PREDEFINED = True       # Include predefined test cases
 USE_MANUAL = False          # Include manual DNA + pattern
 USE_RANDOM = True           # Include randomly generated sequences
 USE_FILE = False            # Include DNA from file
@@ -25,7 +25,7 @@ MANUAL_DNA_TEXT = "ATCGATCGGCTAATCGGCTAGCTAATCG"
 MANUAL_DNA_PATTERN = "GCTA"
 
 # Random settings
-RANDOM_SIZES = [10, 25, 50, 100, 250, 500, 1000, 5000, 10000]
+RANDOM_SIZES = [4, 10, 25, 50, 80, 100, 250, 500, 1000, 5000, 10000, 25000, 50000]
 PATTERN_LENGTH = 4
 REPETITIONS = 3
 EXPANSION_FACTORS = [1, 2, 5]
@@ -131,7 +131,7 @@ def run_tests():
             sequences.append((text, pattern, None, "Random sequence"))
 
     # ------------------------------
-    # Run benchmark (unchanged)
+    # BENCHMARK FUNCTIONS
     # ------------------------------
     for idx, (text, pattern, expected, desc) in enumerate(sequences):
         size = len(text)
@@ -232,35 +232,51 @@ def plot_results(results):
     random_seq = [r for r in results if "Random" in r[3]]
     user_file  = [r for r in results if "User DNA File" in r[3]]
 
-    def plot_group(group, title, marker_style):
+    def plot_group(group, title):
         if not group:
             return
+
         group_sizes = [r[0] for r in group]
         naive_times = [r[14] for r in group]
         kmp_times   = [r[15] for r in group]
         rk_times    = [r[16] for r in group]
 
-        plt.figure(figsize=(10, 6))
-        plt.plot(group_sizes, naive_times, f'b{marker_style}-', label="Naive")
-        plt.plot(group_sizes, kmp_times,   f'g{marker_style}-', label="KMP")
-        plt.plot(group_sizes, rk_times,    f'r{marker_style}-', label="Rabin-Karp")
-        plt.xlabel("DNA Sequence Length")
-        plt.ylabel("Average Execution Time (seconds)")
-        plt.title(title)
-        plt.grid(True)
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(
+            x=group_sizes, y=naive_times, mode='lines+markers', name='Naive',
+            marker=dict(symbol='circle', size=8), line=dict(color='blue')
+        ))
+        fig.add_trace(go.Scatter(
+            x=group_sizes, y=kmp_times, mode='lines+markers', name='KMP',
+            marker=dict(symbol='triangle-up', size=8), line=dict(color='green')
+        ))
+        fig.add_trace(go.Scatter(
+            x=group_sizes, y=rk_times, mode='lines+markers', name='Rabin-Karp',
+            marker=dict(symbol='diamond', size=8), line=dict(color='red')
+        ))
+
+        fig.update_layout(
+            title=title,
+            xaxis_title='DNA Sequence Length',
+            yaxis_title='Average Execution Time (seconds)',
+            legend_title='Algorithm',
+            template='plotly_white',
+            hovermode='x unified'
+        )
+
+        fig.show()
 
     # Plot according to flags
     if USE_PREDEFINED:
-        plot_group(predefined, "Predefined Sequences Tests", '^')
+        plot_group(predefined, "Predefined Sequence Tests")
     if USE_MANUAL:
-        plot_group(manual_seq, "Manual Sequence Tests", 's')
+        plot_group(manual_seq, "Manual Sequence Tests")
     if USE_RANDOM:
-        plot_group(random_seq, "Randomly Generated DNA Sequence Tests", 'o')
+        plot_group(random_seq, "Randomly Generated DNA Sequence Tests")
     if USE_FILE:
-        plot_group(user_file, DNA_INPUT_FILE, 'd')
+        plot_group(user_file, f"User DNA File: {DNA_INPUT_FILE}")
+
 
 # ------------------------------
 # MACHINE & PARAMETER INFO
