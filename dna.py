@@ -1,12 +1,12 @@
 """
-Protein Pattern Matching Benchmark using Naive, KMP & Rabin-Karp
+DNA Pattern Matching Benchmark using Naive, KMP & Rabin-Karp
 Plots runtime results and uses benchmark.py for timing.
 """
 
 from typing import List
-from benchmark import Benchmark              # <── using your benchmark file
+from benchmark import Benchmark
 import statistics
-import matplotlib.pyplot as plt   # ← add this at top with imports
+import matplotlib.pyplot as plt
 
 
 class PatternMatcher:
@@ -21,11 +21,10 @@ class PatternMatcher:
                 matches.append(i)
         return matches
 
-
     @staticmethod
     def compute_lps(pattern: str) -> List[int]:
         lps = [0] * len(pattern)
-        length = 0 
+        length = 0
         i = 1
 
         while i < len(pattern):
@@ -40,7 +39,6 @@ class PatternMatcher:
                     lps[i] = 0
                     i += 1
         return lps
-
 
     @staticmethod
     def kmp_match(text: str, pattern: str) -> List[int]:
@@ -65,16 +63,15 @@ class PatternMatcher:
 
         return matches
 
-
     @staticmethod
     def rabin_karp_match(text: str, pattern: str, prime=101) -> List[int]:
         matches = []
         t_len, p_len = len(text), len(pattern)
         if p_len > t_len: return matches
         
-        amino = sorted(set(text + pattern))       # auto-detect alphabet
-        map_val = {aa: i+1 for i, aa in enumerate(amino)}
-        base = len(amino)
+        bases = sorted(set(text + pattern))  # DNA alphabet detection
+        map_val = {b: i+1 for i, b in enumerate(bases)}
+        base = len(bases)
 
         p_hash = t_hash = 0
         h = 1
@@ -99,21 +96,20 @@ class PatternMatcher:
 
 
 # =======================================================================
-#                  MAIN BENCHMARK + BUILT-IN PLOTTER
+#                        MAIN BENCHMARK + PLOTTER
 # =======================================================================
 
-def analyze_proteins(file_path="protein.txt", runs=3):
+def analyze_dna(file_path="human-dna.txt", runs=3):
 
     with open(file_path, "r") as f:
         text = f.read().replace("\n", "").strip()
 
-    pattern = input("\nEnter pattern to search (protein-motif): ").strip()
+    pattern = input("\nEnter pattern to search (DNA motif): ").strip()
 
-    print("\nPROTEIN SEQUENCE ANALYSIS RESULTS")
+    print("\nDNA SEQUENCE ANALYSIS RESULTS")
     print("="*60)
-    print(f"Sequence length: {len(text):,} amino acids")
+    print(f"Sequence length: {len(text):,} bp")
     print(f"Pattern searched: {pattern}\n")
-
 
     algos = {
         "Naive": PatternMatcher.naive_match,
@@ -121,7 +117,7 @@ def analyze_proteins(file_path="protein.txt", runs=3):
         "Rabin-Karp": PatternMatcher.rabin_karp_match
     }
 
-    results = {}          # store timing + matches for plotting
+    results = {}
     match_positions = None
 
     for name, func in algos.items():
@@ -129,24 +125,18 @@ def analyze_proteins(file_path="protein.txt", runs=3):
         for _ in range(runs):
             t, output = Benchmark.time_function(func, text, pattern)
             times.append(t)
-            match_positions = output        # store last list
+            match_positions = output
 
         results[name] = (statistics.mean(times), len(match_positions))
 
-
-    # ================= PRINT MATCH SUMMARY =================
-
     print(f"Total matches found: {len(match_positions)}\n")
-
     if len(match_positions) > 20:
         print("Match positions (first 20):", match_positions[:20])
         print(f"... and {len(match_positions)-20} more\n")
     else:
         print("Match positions:", match_positions, "\n")
 
-
     # ================= PRINT TIMING TABLE =================
-
     print("ALGORITHM PERFORMANCE COMPARISON")
     print("="*60)
     print(f"| {'Algorithm':<10} | {'Avg Time (s)':<12} | {'Matches':<10} |")
@@ -158,14 +148,11 @@ def analyze_proteins(file_path="protein.txt", runs=3):
     fastest = min(results, key=lambda x: results[x][0])
     print("\nFastest Algorithm:", fastest)
 
-
-        # ===================================================================
-    # 📈 LINE GRAPH — 5 RUNNING TIMES PER ALGORITHM (MATPLOTLIB)
-    # Styled like Plotly line+markers
     # ===================================================================
-
-    runs = 5  # 🔒 Force 5 test runs
-    raw_times = {}  # algo -> list of 5 timing values
+    # 📈 5 RUN BENCHMARK — MATPLOTLIB PLOT
+    # ===================================================================
+    runs = 5
+    raw_times = {}
 
     print("\nBenchmarking 5 runs per algorithm...")
     for name, func in algos.items():
@@ -173,11 +160,10 @@ def analyze_proteins(file_path="protein.txt", runs=3):
         for _ in range(runs):
             t, output = Benchmark.time_function(func, text, pattern)
             times.append(t)
-        raw_times[name] = times  # store 5-run data
+        raw_times[name] = times
 
-    x_runs = list(range(1, runs + 1))  # 1,2,3,4,5 runs
+    x_runs = list(range(1, runs + 1))
 
-    # Plot styling matching Plotly
     plt.figure(figsize=(10, 6))
     line_styles = {
         "Naive":      {"color": "blue",  "marker": "o"},
@@ -186,7 +172,7 @@ def analyze_proteins(file_path="protein.txt", runs=3):
     }
 
     for algo, times in raw_times.items():
-        style = line_styles.get(algo, {"color": "black", "marker": "o"})
+        style = line_styles.get(algo)
         plt.plot(
             x_runs, times,
             label=algo,
@@ -195,50 +181,37 @@ def analyze_proteins(file_path="protein.txt", runs=3):
             markersize=5,
             color=style["color"]
         )
-
-        # Label each point
         for x, t in zip(x_runs, times):
             plt.text(x, t, f"{t:.6f}",
                      ha='center', va='bottom',
                      fontsize=8, color=style["color"])
 
-    plt.title("Algorithm Runtime Comparison")
+    plt.title("Algorithm Runtime Comparison (DNA Sequence)")
     plt.xlabel("Run Number")
     plt.ylabel("Execution Time (seconds)")
     plt.xticks(x_runs)
-
-    # White background like plotly_white
     plt.grid(linestyle='--', alpha=0.3)
     plt.legend(title="Algorithm")
 
-    # Add text length & pattern info on the graph
+    # DNA version annotation
     info_text = (
-        f"Text Length: {len(text):,} aa\n"
-        f"Pattern: \"{pattern}\" ({len(pattern)} aa)"
+        f"Text Length: {len(text):,} bp\n"
+        f"Pattern: \"{pattern}\" ({len(pattern)} bp)"
     )
-
     plt.text(
         0.02, 0.95,
         info_text,
         transform=plt.gca().transAxes,
         fontsize=9,
         verticalalignment="top",
-        bbox=dict(
-            boxstyle="round,pad=0.3",
-            facecolor="white",
-            alpha=0.8,
-            edgecolor="gray"
-        )
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8, edgecolor="gray")
     )
-
 
     plt.tight_layout()
     plt.show()
 
 
 
-
-
 # ======================== RUN ===========================
 if __name__ == "__main__":
-    analyze_proteins()
+    analyze_dna()
