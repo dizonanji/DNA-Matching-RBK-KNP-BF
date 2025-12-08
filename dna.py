@@ -13,6 +13,7 @@ import sys
 
 ALLOWED_BASES = set("ACGT")
 
+
 def load_and_clean_sequence(file_path: str) -> str:
     """
     Read a DNA file, remove FASTA headers and whitespace, uppercase,
@@ -43,14 +44,18 @@ def load_and_clean_sequence(file_path: str) -> str:
 
     cleaned = "".join(filtered_chars)
 
-    # Helpful diagnostics printed to stderr so they don't mix with normal output if desired
     if removed > 0:
-        print(f"Warning: removed {removed:,} / {total_len:,} characters "
-              f"that were not A/C/G/T (e.g. N, <, >, digits, whitespace).")
+        print(
+            f"Warning: removed {removed:,} / {total_len:,} characters "
+            f"that were not A/C/G/T (e.g. N, <, >, digits, whitespace)."
+        )
     if filtered_len == 0:
-        raise ValueError("No valid A/C/G/T bases remain after cleaning the input file.")
+        raise ValueError(
+            "No valid A/C/G/T bases remain after cleaning the input file."
+        )
 
     return cleaned
+
 
 def get_valid_pattern() -> str:
     """
@@ -64,10 +69,13 @@ def get_valid_pattern() -> str:
             continue
         invalid = [ch for ch in pattern if ch not in ALLOWED_BASES]
         if invalid:
-            print(f"Pattern contains invalid characters: {sorted(set(invalid))}. "
-                  f"Please enter only A, C, G, or T.")
+            print(
+                f"Pattern contains invalid characters: {sorted(set(invalid))}. "
+                f"Please enter only A, C, G, or T."
+            )
             continue
         return pattern
+
 
 def analyze_dna(file_path="human-dna.txt", runs=3):
     # Load & clean
@@ -82,13 +90,13 @@ def analyze_dna(file_path="human-dna.txt", runs=3):
     algos = {
         "Naive": PatternMatcher.naive_match,
         "KMP": PatternMatcher.kmp_match,
-        "Rabin-Karp": PatternMatcher.rabin_karp_match
+        "Rabin-Karp": PatternMatcher.rabin_karp_match,
     }
 
     results = {}
-    match_positions = []
+    match_positions: List[int] = []
 
-    # ------------------ MAIN 3-RUN BENCHMARK ------------------
+    # ------------------ MAIN runs-RUN BENCHMARK ON FULL TEXT ------------------
     for name, func in algos.items():
         times = []
         for _ in range(runs):
@@ -105,8 +113,8 @@ def analyze_dna(file_path="human-dna.txt", runs=3):
     else:
         print("Match positions:", match_positions, "\n")
 
-    # ================= PRINT TIMING TABLE =================
-    print("ALGORITHM PERFORMANCE COMPARISON")
+    # ================= PRINT TIMING TABLE (FULL TEXT) =================
+    print("ALGORITHM PERFORMANCE COMPARISON (Full Text)")
     print("=" * 60)
     print(f"| {'Algorithm':<12} | {'Avg Time (s)':<12} | {'Matches':<10} |")
     print("|" + "-" * 56 + "|")
@@ -115,67 +123,107 @@ def analyze_dna(file_path="human-dna.txt", runs=3):
         print(f"| {name:<12} | {t:<12.6f} | {m:<10} |")
 
     fastest = min(results, key=lambda x: results[x][0])
-    print("\nFastest Algorithm:", fastest)
+    print("\nFastest Algorithm (full text):", fastest)
 
     # ===================================================================
-    # 📈 5 RUN BENCHMARK — MATPLOTLIB PLOT
+    # 📈 AVERAGE RUNTIME VS INPUT SIZE (each test case has ≥3 runs)
     # ===================================================================
-    runs_plot = 5
-    raw_times = {}
 
-    print("\nBenchmarking 5 runs per algorithm...")
-    for name, func in algos.items():
-        times = []
-        for _ in range(runs_plot):
-            t, output = Benchmark.time_function(func, text, pattern)
-            times.append(t)
-        raw_times[name] = times
+    # Define different input sizes as fractions of the full cleaned sequence
+    fractions = [0.2, 0.4, 0.6, 0.8, 1.0]
+    sizes = sorted(
+        set(
+            max(len(pattern) + 1, int(len(text) * frac))
+            for frac in fractions
+            if int(len(text) * frac) >= len(pattern) + 1
+        )
+    )
 
-    x_runs = list(range(1, runs_plot + 1))
+    # Ensure at least 3 test cases even for short sequences
+    if len(sizes) < 3:
+        n = len(text)
+        sizes = sorted(
+            set(
+                [
+                    max(len(pattern) + 1, n // 3),
+                    max(len(pattern) + 1, (2 * n) // 3),
+                    n,
+                ]
+            )
+        )
+
+    runs_per_case = max(3, runs)  # each test case must have at least 3 runs
+
+    print("\nSCALING EXPERIMENT: Average runtime vs. input size")
+    print(f"(Each test case averaged over {runs_per_case} runs)")
+    print("=" * 60)
+
+    # algo -> list of avg times for each input size
+    avg_times_vs_n = {name: [] for name in algos.keys()}
+
+    # Tabulated results per test size
+    for n in sizes:
+        subtext = text[:n]
+        print(f"\nInput size n = {n} bp")
+        print(f"| {'Algorithm':<12} | {'Avg Time (s)':<12} |")
+        print("|" + "-" * 32 + "|")
+
+        for name, func in algos.items():
+            times = []
+            for _ in range(runs_per_case):
+                t, _ = Benchmark.time_function(func, subtext, pattern)
+                times.append(t)
+            avg_t = statistics.mean(times)
+            avg_times_vs_n[name].append(avg_t)
+            print(f"| {name:<12} | {avg_t:<12.6f} |")
+
+    # ===================== PLOT: AVG TIME VS INPUT SIZE =====================
 
     plt.figure(figsize=(10, 6))
+
+    # Retain the original color & marker assignment
     line_styles = {
-        "Naive":      {"color": "blue",  "marker": "o"},
-        "KMP":        {"color": "green", "marker": "^"},
-        "Rabin-Karp": {"color": "red",   "marker": "D"}
+        "Naive": {"color": "blue", "marker": "o"},
+        "KMP": {"color": "green", "marker": "^"},
+        "Rabin-Karp": {"color": "red", "marker": "D"},
     }
 
-    for algo, times in raw_times.items():
-        style = line_styles.get(algo, {"marker": "o", "color": "black"})
+    for name in algos.keys():
+        style = line_styles.get(name, {"color": "black", "marker": "o"})
         plt.plot(
-            x_runs, times,
-            label=algo,
-            linewidth=1,
+            sizes,
+            avg_times_vs_n[name],
+            label=name,
+            linewidth=1.5,
             marker=style["marker"],
-            markersize=5,
-            color=style["color"]
+            markersize=6,
+            color=style["color"],
         )
-        for x, t in zip(x_runs, times):
-            plt.text(
-                x, t, f"{t:.6f}",
-                ha='center', va='bottom',
-                fontsize=8, color=style["color"]
-            )
 
-    plt.title("Algorithm Runtime Comparison (DNA Sequence)")
-    plt.xlabel("Run Number")
-    plt.ylabel("Execution Time (seconds)")
-    plt.xticks(x_runs)
-    plt.grid(linestyle='--', alpha=0.3)
+    plt.title("Average Runtime vs Input Size (DNA Pattern Matching)")
+    plt.xlabel("Input size n (length of DNA text in bp)")
+    plt.ylabel("Average running time (seconds)")
+    plt.grid(linestyle="--", alpha=0.3)
     plt.legend(title="Algorithm")
 
     info_text = (
-        f"Text Length: {len(text):,} bp\n"
-        f"Pattern: \"{pattern}\" ({len(pattern)} bp)"
+        f"Full Text Length: {len(text):,} bp\n"
+        f"Pattern: \"{pattern}\" ({len(pattern)} bp)\n"
+        f"Runs per test case: {runs_per_case}"
     )
     plt.text(
-        0.02, 0.95,
+        0.02,
+        0.95,
         info_text,
         transform=plt.gca().transAxes,
         fontsize=9,
         verticalalignment="top",
-        bbox=dict(boxstyle="round,pad=0.3",
-                  facecolor="white", alpha=0.8, edgecolor="gray")
+        bbox=dict(
+            boxstyle="round,pad=0.3",
+            facecolor="white",
+            alpha=0.8,
+            edgecolor="gray",
+        ),
     )
 
     plt.tight_layout()
