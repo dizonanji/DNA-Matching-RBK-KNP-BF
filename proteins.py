@@ -110,6 +110,9 @@ class PatternMatcher:
         """
         Rabin-Karp pattern matching algorithm using rolling hash.
 
+        Improved: use a larger fixed base to reduce hash collisions,
+        instead of tying the base to the alphabet size.
+
         Args:
             text: Protein sequence to search in
             pattern: Pattern/motif to search for
@@ -126,9 +129,11 @@ class PatternMatcher:
             return matches
 
         # Auto-detect alphabet from protein sequence and pattern
-        alphabet = sorted(set(text + pattern))
-        char_map = {ch: i + 1 for i, ch in enumerate(alphabet)}
-        base = len(alphabet)
+        alphabet = set(text + pattern)
+        # Map each amino acid to a small integer
+        char_map = {ch: i + 1 for i, ch in enumerate(sorted(alphabet))}
+        # Use a larger fixed base to spread hash values better
+        base = 257  # larger than alphabet size, reduces collisions vs small bases
 
         # Calculate hash values
         pattern_hash = 0
